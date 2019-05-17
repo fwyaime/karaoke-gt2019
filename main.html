@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>HF011 - Gamelle Trophy</title>
+    <script src="js/jquery.min.js"></script>
+    <script src="bootstrap/bootstrap.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="bootstrap/bootstrap.min.css"/>
+</head>
+<body>
+<div class="container">
+    <h1 class="text-center">HF011 - Gamelle Trophy</h1>
+    <nav class="nav nav-pills nav-justified">
+        <a class="nav-item nav-link active" href="#" id="menu1">1. Sélection</a>
+        <a class="nav-item nav-link disabled" href="#" id="menu2">2. Jeu</a>
+        <a class="nav-item nav-link disabled" href="#" id="menu3">3. Résultat</a>
+    </nav>
+    <div class="m-4 bg-light" id="page1">
+        <div class="form-group p-5">
+            <label for="groupName">Nom de la Patrouille: </label>
+            <input type="text" class="form-control mb-4" placeholder="HF011 - Jaguars" id="groupName" required>
+            <label for="musiquePick">Musique à chanter:</label>
+            <div class="form-group" id="musiquePick"></div>
+            <div class="text-right">
+                <button class="btn btn-primary m-4" id="page1Start">Start</button>
+            </div>
+        </div>
+    </div>
+    <div id="page2" class="collapse text-center">
+        <p id="message" class="alert alert-info text-center"></p>
+        <div class="row">
+            <p class="col-1 text-left font-weight-bold">0</p>
+            <h4 class="col-10">KM/H: <strong id="kmh">0</strong></h4>
+            <p class="col-1 text-right font-weight-bold"><span id="limit">30</span></p>
+        </div>
+        <div class="progress">
+            <div id="progressGam" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 75%"></div>
+        </div>
+        <video id="video" width="1110" controls src="Je te promets - Johnny Hallyday.mp4"></video>
+    </div>
+    <div id="page3" class="collapse">
+        <div class="text-center alert alert-success m-4">
+            <h3>Bravo les <strong id="groupNameEnd"></strong></h3>
+            <p>Vous venez de chanter <span id="songEnd"></span> et vous avez pédalé à une vitesse maximale de <strong id="maxSpeed"></strong> km/h !</p>
+            <h6>La HF011 vous dis aurevoir !</h6>
+        </div>
+        <button id="buttonEnd" class="btn btn-danger m-4">Réinitialiser</button>
+    </div>
+</div>
+<script>
+    // Const
+    const wheel_diameter = 3;
+    const songs = ["Je te promets - Johnny Hallyday", "Sous le vent - Garou"];
+    const limit = 3;
+    checkedSong = songs[0] + ".mp4";
+    max = 0.0;
+    running = false;
+
+    // Elements
+    menu1 = document.getElementById('menu1');
+    menu2 = document.getElementById('menu2');
+    menu3 = document.getElementById('menu3');
+    page1 = document.getElementById('page1');
+    page2 = document.getElementById('page2');
+    page3 = document.getElementById('page3');
+    page1Start = document.getElementById('page1Start');
+    musiquePick = document.getElementById('musiquePick');
+    groupName = document.getElementById('groupName');
+    video = document.getElementById('video');
+    kmh = document.getElementById('kmh');
+    progress = document.getElementById('progressGam');
+    toggleMute = document.getElementById('toggleMute');
+    groupeNameEnd = document.getElementById('groupNameEnd');
+    songEnd = document.getElementById('songEnd');
+    maxSpeed = document.getElementById('maxSpeed');
+    buttonEnd = document.getElementById('buttonEnd');
+    message = document.getElementById('message');
+    limitKMH = document.getElementById('limit');
+
+    // <div class="form-check">
+    //     <input class="form-check--input" type="radio" name="exampleRadios" id="exampleRadios3" value="option3">
+    //     <label class="form-check-label" for="exampleRadios3">
+    //         Third radio radio
+    //     </label>
+    // </div>
+
+    // utils
+    function addCheckbox(id, name, checked) {
+        div = document.createElement("div");
+        div.classList.add("form-check");
+        //Input
+        input = document.createElement("input");
+        input.classList.add("form-check-input");
+        input.setAttribute("type", "radio");
+        input.setAttribute("name", "musiquePick");
+        input.setAttribute("id", id);
+        input.setAttribute("value", name + ".mp4");
+        if (checked) {
+            input.setAttribute("checked", "checked");
+        }
+        //Label
+        label = document.createElement("label");
+        label.classList.add("form-check-label");
+        label.setAttribute("for", id);
+        label.innerText = name;
+        div.appendChild(input);
+        div.appendChild(label);
+        musiquePick.appendChild(div);
+    }
+
+    function addClass(id, cssClass) {
+        element = document.getElementById(id);
+        if (!element.classList.contains(cssClass)) {
+            element.classList.add(cssClass);
+        }
+    }
+
+    function removeClass(id, cssClass) {
+        element = document.getElementById(id);
+        if (element.classList.contains(cssClass)) {
+            element.classList.remove(cssClass);
+        }
+    }
+
+    function hide(id) {
+        addClass(id, "collapse");
+    }
+
+    function show(id) {
+        removeClass(id, "collapse");
+    }
+
+    function displayMessage() {
+        percentageVid = video.currentTime / video.duration * 100;
+        console.log(percentageVid);
+        if (percentageVid < 2) {
+            message.innerHTML = groupName.value + " vont chanter !";
+        } else if (percentageVid < 10) {
+            message.innerHTML = "On entend rien les " + groupName.value + ", vous allez chanter ?";
+        } else if (percentageVid < 35) {
+            message.innerHTML = "Est-ce que vous pédalez ? votre vitesse max c'est " + max + " km/h :O";
+        } else if (percentageVid < 50) {
+            message.innerHTML = "Les " + groupName.value + " commencent à mettre le feu !";
+        } else if (percentageVid < 65) {
+            message.innerHTML = "On est à la moitié, et je peux vous dire que ça swing, mais pas assez !";
+        } else if (percentageVid < 80) {
+            message.innerHTML = "Allez les cyclistes, l'énergie ne va pas arriver toute seule !";
+        } else if (percentageVid < 95) {
+            message.innerHTML = "Les travailleurs passent un super moment grâce à vous les " + groupName.value + " !";
+        } else {
+            message.innerHTML = "Bien joué les " + groupName.value + ", c'est bientôt la fin :-(";
+        }
+    }
+
+    // Event Handlers
+    onClickMenu1 = function (event) {
+        groupName.value = "";
+        max = 0.0;
+        kmh.innerHTML = "0.0";
+        show("page1");
+        hide("page2");
+        hide("page3");
+        addClass("menu1", "active");
+        removeClass("menu2", "active");
+        addClass("menu2", "disabled");
+        removeClass("menu3", "active");
+        addClass("menu3", "disabled");
+    };
+    onClickMenu2 = function (event) {
+        running = true;
+        video.setAttribute("src", checkedSong);
+        message.innerText = "Les " + groupName.value + " vont bientôt chanter !";
+        hide("page1");
+        show("page2");
+        hide("page3");
+        removeClass("menu1", "active");
+        removeClass("menu2", "disabled");
+        addClass("menu2", "active");
+        removeClass("menu3", "active");
+        addClass("menu3", "disabled");
+        var ws = new WebSocket("ws://127.0.0.1:8080/");
+        ws.onmessage = onReceiveWSMessage;
+        video.volume = 0;
+        progress.style.width = "0%";
+    };
+    onClickMenu3 = function (event) {
+        running = false;
+        video.pause();
+        groupeNameEnd.innerText = groupName.value;
+        songEnd.innerText = checkedSong.split('.')[0];
+        maxSpeed.innerText = max;
+        hide("page1");
+        hide("page2");
+        show("page3");
+        removeClass("menu1", "active");
+        removeClass("menu2", "active");
+        addClass("menu2", "disabled");
+        addClass("menu3", "active");
+        removeClass("menu3", "disabled");
+
+    };
+    onClickStartPage1 = function (event) {
+        if (groupName.value !== "") {
+            // Find Checked Radio
+            elements = document.getElementsByClassName("form-check-input");
+            for (i = 0; i < elements.length; i++) {
+                if (elements[i].checked) {
+                    checkedSong = elements[i].value;
+                }
+            }
+            onClickMenu2(event);
+        }
+    };
+    onReceiveWSMessage = function (event) {
+        if (running) {
+            if (video.paused && event.data > 0) {
+                video.play();
+            }
+            displayMessage();
+            nbKMH = event.data * wheel_diameter * 0.001885;
+            kmh.innerText = nbKMH;
+            max = Math.max(max, parseFloat(kmh.innerHTML));
+            percentage = nbKMH / limit;
+            video.volume = percentage >= 1 ? 1 : percentage;
+            progress.style.width = percentage * 100 + "%";
+        }
+    };
+
+    // Menu Behavior
+    menu1.onclick = onClickMenu1;
+    menu2.onclick = onClickMenu2;
+    menu3.onclick = onClickMenu3;
+    page1Start.onclick = onClickStartPage1;
+    video.onended = onClickMenu3;
+    buttonEnd.onclick = onClickMenu1;
+
+    // Page 1
+    songs.forEach(function (value, index) {
+        addCheckbox(index, value, (index === 0 ? 1 : 0))
+    });
+
+    // Page2
+    limitKMH.innerText = limit;
+    video.loop = false;
+</script>
+</body>
+</html>
